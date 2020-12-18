@@ -112,7 +112,6 @@ def shortest_path(source, target):
                     path.append([cur.action, cur.state])
                     cur = cur.parent
                 path.reverse()
-                print(path)
                 return path
             if (state not in visited and not frontier.contains_state(state)):
                 frontier.add(Node(state, cur, action))
