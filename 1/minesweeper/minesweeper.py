@@ -113,7 +113,7 @@ class Sentence():
         """
         Returns the set of all cells in self.cells known to be safe.
         """
-        if (self.count == len(self.cells)):
+        if (self.count == 0):
             return self.cells
         return set()
 
@@ -122,8 +122,8 @@ class Sentence():
         Updates internal knowledge representation given the fact that
         a cell is known to be a mine.
         """
-        if cell in self.cells:
-            self.cells.remove(cells)
+        if cell in self.cells and len(self.cells) != self.count:
+            self.cells.remove(cell)
             self.count -= 1
 
     def mark_safe(self, cell):
@@ -192,61 +192,60 @@ class MinesweeperAI():
         self.moves_made.add(cell)
         self.mark_safe(cell)
 
-        surounding = []
+        surrounding = set()
         i, j = cell
-        if (j-1 >= 0) \
-            and ((i, j-1) not in self.moves_made) \
-            and ((i, j-1) not in self.safes):
-            surounding.append((i, j-1))
+        if (j-1 >= 0):
+            surrounding.add((i, j-1))
+        if (j+1 < self.width):
+            surrounding.add((i, j+1))
+        if (i-1 >= 0):
+            surrounding.add((i-1, j))
+        if (i+1 < self.height):
+            surrounding.add((i+1, j))
+        if (j-1 >= 0 and i+1 < self.height):
+            surrounding.add((i+1, j-1))
+        if (j+1 < self.width and i+1 < self.height):
+            surrounding.add((i+1, j+1))
+        if (j-1 >= 0 and i-1 >= 0):
+            surrounding.add((i-1, j-1))
+        if (i-1 >= 0 and j+1 < self.width):
+            surrounding.add((i-1, j+1))
 
-        if (j+1 < self.width) \
-            and ((i, j+1) not in self.moves_made) \
-            and ((i, j+1) not in self.safes):
-            surounding.append((i, j+1))
+        # Remove any of the elements that we have deemed safe
+        surrounding = surrounding - self.safes
 
-        if (i-1 >= 0) \
-            and ((i-1, j) not in self.moves_made) \
-            and ((i-1, j) not in self.safes):
-            surounding.append((i-1, j))
+        surrounding_sent = Sentence(surrounding, count)
+        self.knowledge.append(surrounding_sent)
 
-        if (i+1 < self.height) \
-            and ((i+1, j) not in self.moves_made) \
-            and ((i+1, j) not in self.safes):
-            surounding.append((i+1, j))
+        # See if we can make some new inferences with this new knowledge
+        inferences = []
+        temp = surrounding_sent
+        for sent in self.knowledge:
+            if temp == sent:
+                break
+            elif (temp.cells <= sent.cells):
+                inf_cells = sent.cells - temp.cells
+                inf_count = sent.count - temp.count
+                inferences.append(Sentence(inf_cells, inf_count))
+            temp = sent
 
-        if (j-1 >= 0 and i+1 < self.height) \
-            and ((i+1, j-1) not in self.moves_made) \
-            and ((i+1, j-1) not in self.safes):
-            surounding.append((i+1, j-1))
+        self.knowledge += inferences
 
-        if (j+1 < self.width and i+1 < self.height) \
-            and ((i+1, j+1) not in self.moves_made) \
-            and ((i+1, j+1) not in self.safes):
-            surounding.append((i+1, j+1))
+        # Let's see if we are able to identify more safes or mines
+        new_safes = set()
+        new_mines = set()
+        for sent in self.knowledge:
+            new_safes = new_safes | sent.known_safes()
+            new_mines = new_mines | sent.known_mines()
 
-        if (j-1 >= 0 and i-1 >= 0) \
-            and ((i-1, j-1) not in self.moves_made) \
-            and ((i-1, j-1) not in self.safes):
-            surounding.append((i-1, j-1))
-
-        if (i-1 >= 0 and j+1 < self.width) \
-            and ((i-1, j+1) not in self.moves_made) \
-            and ((i-1, j+1) not in self.safes):
-            surounding.append((i-1, j+1))
-
-        self.knowledge.append(Sentence(surounding, count))
-        if (count == 0):
-            for c in surrounding:
-            self.safes.add(c)
-            self.mark_safe(c)
-
-        elif count == len(surrounding):
-            for c in surrounding:
-                self.mark_mine(c)
-        else:
-
-
-
+        # Remove any duplicates we picked up from all going through all of the
+        # knowledge
+        new_safes = new_safes - self.safes
+        new_mines = new_mines - self.mines
+        for s in new_safes:
+            self.mark_safe(s)
+        for m in new_mines:
+            self.mark_mine(m)
 
 
     def make_safe_move(self):
@@ -258,11 +257,13 @@ class MinesweeperAI():
         This function may use the knowledge in self.mines, self.safes
         and self.moves_made, but should not modify any of those values.
         """
-        # If the safes set is empty, then we cannot make a safe move
-        if len(self.safes) == 0 or self.safes == self.moves_made:
+        safe_moves = self.safes.copy()
+        safe_moves = safe_moves - self.moves_made
+
+        if len(safe_moves) == 0:
             return None
 
-        return self.safes.pop()
+        return safe_moves.pop()
 
 
     def make_random_move(self):
@@ -273,11 +274,13 @@ class MinesweeperAI():
             2) are not known to be mines
         """
         # Add mines randomly
+        if len(self.moves_made) == 56:
+            return None
         while True:
             i = random.randrange(self.height)
             j = random.randrange(self.width)
             cell = i, j
-            if (cell not in self.moves_made):
+            if (cell not in self.moves_made and cell not in self.mines):
                 return cell
 
 
