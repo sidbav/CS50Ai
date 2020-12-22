@@ -64,7 +64,7 @@ def transition_model(corpus, page, damping_factor):
         res[key] = random_prob
 
     # Probability of links that can be clicked from the current page
-    if corpus[page] is not None:
+    if corpus[page] is not None and len(corpus[page]) != 0:
         click_prob = damping_factor/(len(corpus[page]))
         for elem in corpus[page]:
             res[elem] += click_prob
@@ -81,23 +81,36 @@ def sample_pagerank(corpus, damping_factor, n):
     their estimated PageRank value (a value between 0 and 1). All
     PageRank values should sum to 1.
     """
-    # Page for the inital sample
+    # Inital the result dictionary
+    res = dict()
+    for key in corpus.keys():
+        res[key] = 0
+
+    # Generate a random value for the first sameple
     page = random.choice(list(corpus.keys()))
-    res = None
-    for i in range(n):
-        res = transition_model(corpus, page, damping_factor)
-        # Pick a random value from 0 to 1, and then go to the page that
-        # coresponds to that value.
+    res[page] = 1
+
+    for i in range(1, n):
+        model = transition_model(corpus, page, damping_factor)
+        page = random.choices(list(model.keys()), weights=list(model.values()))[0]
+        """
         done = False
         while done == False:
             ran = random.random()
             cur = 0
-            for key, val in res.items():
+            for key, val in model.items():
                 if ran >= cur and ran < cur+val:
                     page = key
                     done = True
                     break
                 cur += val
+        """
+        res[page] += 1
+
+    # Divide all of the results by n to get percentages
+    for key in res.keys():
+        res[key] = res[key]/n
+
     return res
 
 
@@ -123,7 +136,7 @@ def iterate_pagerank(corpus, damping_factor):
         for key in corpus.keys():
             total = 0
             for val in corpus[key]:
-                if corpus[val] != None:
+                if corpus[val] != None and len(corpus[val]) != 0:
                     total += res[val]/(len(corpus[val]))
                 else:
                     total += 0/length
