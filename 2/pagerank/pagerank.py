@@ -68,6 +68,10 @@ def transition_model(corpus, page, damping_factor):
         click_prob = damping_factor/(len(corpus[page]))
         for elem in corpus[page]:
             res[elem] += click_prob
+    # if there are no outgoing links, each page should be equally likely
+    else:
+        for key in res.keys():
+            res[key] = 1/len(corpus)
 
     return res
 
@@ -90,21 +94,10 @@ def sample_pagerank(corpus, damping_factor, n):
     page = random.choice(list(corpus.keys()))
     res[page] = 1
 
+    # Start to sample based on the previous page
     for i in range(1, n):
         model = transition_model(corpus, page, damping_factor)
         page = random.choices(list(model.keys()), weights=list(model.values()))[0]
-        """
-        done = False
-        while done == False:
-            ran = random.random()
-            cur = 0
-            for key, val in model.items():
-                if ran >= cur and ran < cur+val:
-                    page = key
-                    done = True
-                    break
-                cur += val
-        """
         res[page] += 1
 
     # Divide all of the results by n to get percentages
@@ -125,32 +118,34 @@ def iterate_pagerank(corpus, damping_factor):
     """
     res = {}
     length = len(corpus)
-    # Each page is equally likely to be picked
+
+    # At first assume that each page is equally likely to be picked
     prob = 1/length
     for key in corpus.keys():
         res[key] = prob
+
     # Keep running until values do not change by about 0.001
     done = False
     while done == False:
-        temp = {}
-        for key in corpus.keys():
-            total = 0
-            for val in corpus[key]:
-                if corpus[val] != None and len(corpus[val]) != 0:
-                    total += res[val]/(len(corpus[val]))
-                else:
-                    total += 0/length
-
-            temp[key] = (1-damping_factor)/length + damping_factor*total
-
         done = True
+        temp = {}
         for key in res.keys():
-            if abs(res[key] - temp[key]) > 0.001:
+            temp[key] = (1-damping_factor)/length
+            total = 0
+            for k in res.keys():
+                if key in corpus[k]:
+                    total += damping_factor*res[k]/(len(corpus[k]))
+            temp[key] += total
+
+            if abs(res[key] - temp[key]) > 0.0005:
                 done = False
-        res = temp
+
+        for key in res.keys():
+            res[key] = temp[key]
 
     return res
 
-
 if __name__ == "__main__":
     main()
+
+
