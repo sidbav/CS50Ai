@@ -45,7 +45,6 @@ def main():
     if len(sys.argv) != 2:
         sys.exit("Usage: python heredity.py data.csv")
     people = load_data(sys.argv[1])
-    print(people)
 
 
     # Keep track of gene and trait probabilities for each person
@@ -144,12 +143,7 @@ def joint_probability(people, one_gene, two_genes, have_trait):
         * everyone not in set` have_trait` does not have the trait.
     """
 
-    print(one_gene)
-    print(two_genes)
-    print(have_trait)
-
-    everyone = set(people.keys())
-    no_gene = everyone - (one_gene | two_genes)
+    no_gene = set(people.keys()) - (one_gene | two_genes)
     mutated = PROBS["mutation"]
     prob = 1
 
@@ -232,7 +226,7 @@ def joint_probability(people, one_gene, two_genes, have_trait):
 
         # if the person's mother or father are not listed use the unconditional
         # probability list before
-        if len(mom) == 0 and len(dad) == 0:
+        if mom == None and dad == None:
             prob *= PROBS["gene"][2]
         else:
             if mom in no_gene and dad in no_gene:
@@ -273,7 +267,25 @@ def update(probabilities, one_gene, two_genes, have_trait, p):
     Which value for each distribution is updated depends on whether
     the person is in `have_gene` and `have_trait`, respectively.
     """
-    raise NotImplementedError
+
+    everyone = set(probabilities.keys())
+    no_gene = everyone - (one_gene | two_genes)
+    no_trait = everyone - have_trait
+
+    for person in no_gene:
+        probabilities[person]["gene"][0] += p
+
+    for person in one_gene:
+        probabilities[person]["gene"][1] += p
+
+    for person in two_genes:
+        probabilities[person]["gene"][2] += p
+
+    for person in have_trait:
+        probabilities[person]["trait"][True] += p
+
+    for person in no_trait:
+        probabilities[person]["trait"][False] += p
 
 
 def normalize(probabilities):
@@ -281,8 +293,19 @@ def normalize(probabilities):
     Update `probabilities` such that each probability distribution
     is normalized (i.e., sums to 1, with relative proportions the same).
     """
-    raise NotImplementedError
+    for person in probabilities:
+        gene = probabilities[person]["gene"]
+        trait = probabilities[person]["trait"]
 
+        total_gene = gene[0] + gene[1] + gene[2]
+        total_trait = trait[True] + trait[False]
+
+        gene[0] = gene[0]/total_gene
+        gene[1] = gene[1]/total_gene
+        gene[2] = gene[2]/total_gene
+
+        trait[True] = trait[True]/total_trait
+        trait[False] = trait[False]/total_trait
 
 if __name__ == "__main__":
     main()
