@@ -5,6 +5,7 @@ import sys
 PROBS = {
 
     # Unconditional probabilities for having gene
+    # The probabilites if we know nothing about the person's parents
     "gene": {
         2: 0.01,
         1: 0.03,
@@ -14,6 +15,7 @@ PROBS = {
     "trait": {
 
         # Probability of trait given two copies of gene
+        # P(trait | number of genes)
         2: {
             True: 0.65,
             False: 0.35
@@ -43,6 +45,8 @@ def main():
     if len(sys.argv) != 2:
         sys.exit("Usage: python heredity.py data.csv")
     people = load_data(sys.argv[1])
+    print(people)
+
 
     # Keep track of gene and trait probabilities for each person
     probabilities = {
@@ -135,15 +139,131 @@ def joint_probability(people, one_gene, two_genes, have_trait):
     The probability returned should be the probability that
         * everyone in set `one_gene` has one copy of the gene, and
         * everyone in set `two_genes` has two copies of the gene, and
-        * everyone not in `one_gene` or `two_gene` does not have the gene, and
+        * everyone not in `one_gene` or `two_genes` does not have the gene, and
         * everyone in set `have_trait` has the trait, and
         * everyone not in set` have_trait` does not have the trait.
     """
 
+    print(one_gene)
+    print(two_genes)
+    print(have_trait)
+
+    everyone = set(people.keys())
+    no_gene = everyone - (one_gene | two_genes)
+    mutated = PROBS["mutation"]
     prob = 1
+
+    for person in no_gene:
+        mom = people[person]["mother"]
+        dad = people[person]["father"]
+
+        # if the person's mother or father are not listed use the unconditional
+        # probability list before
+        if mom == None and dad == None:
+            prob *= PROBS["gene"][0]
+        else:
+            if mom in no_gene and dad in no_gene:
+                prob *= (1-mutated)*(1-mutated)
+
+            elif (mom in no_gene and dad in one_gene) \
+                    or (mom in one_gene and dad in no_gene):
+                prob *= 0.5*(1-mutated)
+
+            elif (mom in one_gene and dad in one_gene):
+                prob *= 0.25
+
+            elif (mom in no_gene and dad in two_genes) \
+                    or (mom in two_genes and dad in no_gene):
+                prob *= mutated*(1-mutated)
+
+            elif (mom in two_genes and dad in one_gene) \
+                    or (mom in one_gene and dad in two_genes):
+                prob *= 0.5*mutated
+
+            else:
+                prob *= mutated*mutated
+
+        # Now check if we assume that have the train or do not have the trait
+        if person in have_trait:
+            prob *= PROBS["trait"][0][True]
+        else:
+            prob *= PROBS["trait"][0][False]
+
     for person in one_gene:
-        if len(people[person]["mother"] == 0 and len(people[person]["father"]):
-    print(people)
+        mom = people[person]["mother"]
+        dad = people[person]["father"]
+
+        # if the person's mother or father are not listed use the unconditional
+        # probability list before
+        if mom == None and dad == None:
+            prob *= PROBS["gene"][1]
+        else:
+            if mom in no_gene and dad in no_gene:
+                prob *= 2*(1-mutated)*mutated
+
+            elif (mom in no_gene and dad in one_gene) \
+                    or (mom in one_gene and dad in no_gene):
+                prob *= 0.5
+
+            elif (mom in one_gene and dad in one_gene):
+                prob *= 0.5
+
+            elif (mom in no_gene and dad in two_genes) \
+                or (mom in two_genes and dad in no_gene):
+                prob *= mutated*mutated + (1-mutated)*(1-mutated)
+
+            elif (mom in two_genes and dad in one_gene) \
+                    or (mom in one_gene and dad in two_genes):
+                prob *= 0.5
+
+            else:
+                prob *= 2*(1-mutated)*mutated
+
+        # Now check if we assume that have the train or do not have the trait
+        if person in have_trait:
+            prob *= PROBS["trait"][1][True]
+        else:
+            prob *= PROBS["trait"][1][False]
+
+
+    for person in two_genes:
+        mom = people[person]["mother"]
+        dad = people[person]["father"]
+
+        # if the person's mother or father are not listed use the unconditional
+        # probability list before
+        if len(mom) == 0 and len(dad) == 0:
+            prob *= PROBS["gene"][2]
+        else:
+            if mom in no_gene and dad in no_gene:
+                prob *= 2*mutated*mutated
+
+            elif (mom in no_gene and dad in one_gene) \
+                    or (mom in one_gene and dad in no_gene):
+                prob *= 0.5*mutated
+
+            elif (mom in one_gene and dad in one_gene):
+                prob *= 0.25
+
+            elif (mom in no_gene and dad in two_genes) \
+                or (mom in two_genes and dad in no_gene):
+                prob *= mutated*(1-mutated)
+
+            elif (mom in two_genes and dad in one_gene) \
+                    or (mom in one_gene and dad in two_genes):
+                prob *= (1-mutated)
+
+            else:
+                prob *= mutated*mutated
+
+        # Now check if we assume that have the train or do not have the trait
+        if person in have_trait:
+            prob *= PROBS["trait"][2][True]
+        else:
+            prob *= PROBS["trait"][2][False]
+
+    return prob
+
 
 
 def update(probabilities, one_gene, two_genes, have_trait, p):
