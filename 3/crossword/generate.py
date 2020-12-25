@@ -153,6 +153,7 @@ class CrosswordCreator():
         if arcs == None:
             arcs = list(self.crossword.overlaps.keys())
 
+        done = arcs
         while len(arcs) != 0:
             x, y = arcs.pop(0)
             if self.revise(x, y):
@@ -160,10 +161,11 @@ class CrosswordCreator():
                     return False
                 else:
                     for v in self.crossword.neighbors(x):
-                        if v == y:
+                        if v == y or (v, x) in done:
                             continue
                         else:
                             arcs.append((v, x))
+                            done.append((v, x))
         return True
 
 
@@ -305,13 +307,51 @@ class CrosswordCreator():
         var = self.select_unassigned_variable(assignment)
         for value in self.order_domain_values(var, assignment):
             assignment[var] = value
+
+            infer = self.inference(var, assignment)
+
+            if infer == None:
+                assignment[var] = None
+                continue
+
+            for key, value in infer.items():
+                assignment[key] = value
+
             if self.consistent(assignment):
                 res = self.backtrack(assignment)
                 if res != None:
                     return res
+
             assignment[var] = None
+            for key in infer.keys():
+                assignment[key] = None
 
         return None
+
+    def inference(self, var, assignment):
+        """
+        Inference takes as arguements the variable just added to the assignment
+
+        inference will return None in the case that this assignment leads to 
+        infernece returns a dictionary of variables, and the values which
+        correpsonds to the values.
+        """
+
+        neighbors = self.crossword.neighbors(var)
+        arcs = []
+        for n in neighbors:
+            arcs.append((n, var))
+
+        # This means this solutions is not valid
+        if self.ac3(arcs) == False:
+            return None
+
+        res = {}
+        for n in neighbors:
+            if len(self.domains[n]) == 1 and assignment[n] != None:
+                res[n] = list(self.domains[n])[0]
+
+        return res
 
 
 def main():
@@ -341,3 +381,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
