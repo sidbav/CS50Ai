@@ -159,8 +159,8 @@ class CrosswordCreator():
                 if len(self.domains[x]) == 0:
                     return False
                 else:
-                    for v in self.crossword.variables:
-                        if v == y or v == x:
+                    for v in self.crossword.neighbors(x):
+                        if v == y:
                             continue
                         else:
                             arcs.append((v, x))
@@ -218,9 +218,21 @@ class CrosswordCreator():
         The first value in the list, for example, should be the one
         that rules out the fewest values among the neighbors of `var`.
         """
-        # For now just return the possible values, and then we can implement the
-        # funtion to return the ordered value
-        return self.domains[var]
+        # If the length of the domain of var is 1, just return the list as is
+        if len(self.domains[var]) == 1:
+            return self.domains[var]
+
+        neighbors = self.crossword.neighbors(var)
+        costs = {}
+        for value in self.domains[var]:
+            total = 0
+            for n in neighbors:
+                if value in self.domains[n]:
+                    total += 1
+            costs[value] = total
+
+        dict(sorted(costs.items(), key=lambda item:item[1]))
+        return costs.keys()
 
 
     def select_unassigned_variable(self, assignment):
@@ -237,12 +249,12 @@ class CrosswordCreator():
             if assignment[var] == None:
                 variables.append(var)
 
+        # If only one more variable needs to be assigned, just return it
         if len(variables) == 1:
             return variables[0]
 
-        # If there is more than one element that needs to assigned, check which
-        # element has the smallest domain
-        smallest = 100000000
+        # Check which element has the smallest domain
+        smallest = 1000000
         smallest_list = []
         for var in variables:
             length = len(self.domains[var])
@@ -257,7 +269,7 @@ class CrosswordCreator():
             return smallest_list[0]
 
         # If there are elements remaining which each have the same size domain,
-        # lets pick the one with the highest degree
+        # lets pick the one with the largest degree
         degree = -100000
         res = None
         for var in smallest_list:
