@@ -227,8 +227,9 @@ class CrosswordCreator():
         for value in self.domains[var]:
             total = 0
             for n in neighbors:
-                if value in self.domains[n]:
-                    total += 1
+                if assignment[n] == None:
+                    if value in self.domains[n]:
+                        total += 1
             costs[value] = total
 
         dict(sorted(costs.items(), key=lambda item:item[1]))
