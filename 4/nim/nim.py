@@ -101,9 +101,10 @@ class NimAI():
         Return the Q-value for the state `state` and the action `action`.
         If no Q-value exists yet in `self.q`, return 0.
         """
-        if (state, action) not in self.q:
+        st = tuple(state)
+        if (st, action) not in self.q.keys():
             return 0
-        return self.q[(state, action)]
+        return self.q[(st, action)]
 
     def update_q_value(self, state, action, old_q, reward, future_rewards):
         """
@@ -120,8 +121,8 @@ class NimAI():
         `alpha` is the learning rate, and `new value estimate`
         is the sum of the current reward and estimated future rewards.
         """
-        self.q[(state, action)] = (1-self.alpha)*self.q[(state, action)] + \
-                                    alpha*(reward+future_rewards)
+        self.q[tuple(state), action] = (1-self.alpha)*old_q \
+                                + self.alpha*(reward+future_rewards)
 
     def best_future_reward(self, state):
         """
@@ -133,11 +134,14 @@ class NimAI():
         Q-value in `self.q`. If there are no available actions in
         `state`, return 0.
         """
-        res = 0
+        res = -float("inf")
         for key in self.q.keys():
-            if key[0] == state:
-                if res > self.q[key]:
+            if key[0] == tuple(state):
+                if res < self.q[key]:
                     res = self.q[key]
+
+        if res == -float("inf"):
+            return 0
         return res
 
 
@@ -156,7 +160,25 @@ class NimAI():
         If multiple actions have the same Q-value, any of those
         options is an acceptable return value.
         """
-        raise NotImplementedError
+        # Gather all of the actions that we can do
+        actions = Nim.available_actions(state)
+
+        # Check if we should use a random action, and if we elect to an random 
+        # action, just return the first element from the list
+        if epsilon:
+            random_action = random.random() <= self.epsilon
+            if random_action:
+                return list(actions)[0]
+
+        best_action = None
+        best_reward = -float("inf")
+        for action in actions:
+            cur = self.get_q_value(state, action)
+            if cur > best_reward:
+                best_reward = cur
+                best_action = action
+
+        return best_action
 
 
 def train(n):
