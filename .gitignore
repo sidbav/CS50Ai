@@ -139,3 +139,5 @@ cython_debug/
 
 **/*.mov
 **/*.DS_STORE
+5/traffic/gtsrb/
+
