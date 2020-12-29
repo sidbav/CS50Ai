@@ -58,7 +58,27 @@ def load_data(data_dir):
     be a list of integer labels, representing the categories for each of the
     corresponding `images`.
     """
-    raise NotImplementedError
+    images = []
+    labels = []
+    NUM_CATEGORIES = len(next(os.walk(data_dir))[1])
+    for i in range(NUM_CATEGORIES):
+        type_dir = os.path.join(data_dir, str(i))
+        with os.scandir(type_dir) as entries:
+            for img in entries:
+                if img.name.split(".", 1)[1] == "ppm":
+                    path = os.path.join(type_dir, img.name)
+                    # Read the image using cv2
+                    image = cv2.imread(path, cv2.IMREAD_COLOR)
+                    # Just call the resize function on all of the images
+                    resized = cv2.resize(
+                            image,
+                            (IMG_HEIGHT, IMG_WIDTH),
+                            interpolation=cv2.INTER_AREA
+                    )
+                    images.append(resized)
+                    labels.append(i)
+
+    return (images, labels)
 
 
 def get_model():
@@ -67,7 +87,40 @@ def get_model():
     `input_shape` of the first layer is `(IMG_WIDTH, IMG_HEIGHT, 3)`.
     The output layer should have `NUM_CATEGORIES` units, one for each category.
     """
-    raise NotImplementedError
+    model = tf.keras.models.Sequential([
+
+        # First convolute the pixels and then pool the pixels
+        tf.keras.layers.Conv2D(
+            64, (3, 3), activation="relu", input_shape=(IMG_WIDTH, IMG_HEIGHT, 3)
+        ),
+        tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
+
+        # Convolute, and pool the pixels again
+        tf.keras.layers.Conv2D(
+            32, (3, 3), activation="relu", input_shape=(IMG_WIDTH, IMG_HEIGHT, 3)
+        ),
+        tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
+
+        # Flatten all of the images
+        tf.keras.layers.Flatten(),
+
+        # Add two hidden layers to the network, resulting in dropout of 
+        tf.keras.layers.Dense(256, activation="relu"),
+        tf.keras.layers.Dense(256, activation="relu"),
+        tf.keras.layers.Dropout(0.5),
+
+        tf.keras.layers.Dense(NUM_CATEGORIES, activation="softmax")
+
+    ])
+
+    # Train neural network
+    model.compile(
+        optimizer="adamax",
+        loss="categorical_crossentropy",
+        metrics=["accuracy"]
+    )
+
+    return model
 
 
 if __name__ == "__main__":
