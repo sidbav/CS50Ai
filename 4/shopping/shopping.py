@@ -75,6 +75,7 @@ def load_data(filename):
                     "Nov" : 10,
                     "Dec" : 11
             }
+
             res = [
                 int(row["Administrative"]),
                 float(row["Administrative_Duration"]),
@@ -101,7 +102,6 @@ def load_data(filename):
     labels = []
     with open(filename) as f:
         reader = csv.DictReader(f)
-        next(reader)
 
         for row in reader:
             evidence.append(helper_load_data(row))
